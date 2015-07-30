@@ -4,13 +4,13 @@ exports.host = null;
 
 exports.blockscore = {
     key: ''
-}
+};
 
 // Port to listen on
 exports.port = 8080;
 
 // Public URL for this blobvault (required for authinfo)
-exports.url = "https://blobvault.example.com";
+exports.url = "https://127.0.0.1";
 
 // SSL settings
 exports.ssl = false;
@@ -27,7 +27,7 @@ exports.patchsize = 1;
 
 // if testmode = true, there is no remote rippled connection made
 // and no ecdsa signature check on create
-exports.testmode = false
+exports.testmode = false;
 
 // if account is created before this date and funded
 exports.nolimit_date = 'Thu May 1 2014';
@@ -41,7 +41,7 @@ exports.username_length = 20;
 exports.schedule = {
     hour: 8,
     minute:0
-}
+};
 
 // if you want to mark emails as being originated from a staging environment
 exports.is_staging = false;
@@ -50,12 +50,12 @@ exports.is_staging = false;
 exports.phone = {
     url : 'http://sandbox-api.authy.com',
     key : '591b17780a53fb9872ec1f17f49e4fff'
-}
+};
 
 //blockscore identity verification
 exports.blockscore = {
     key : ''
-}
+};
 
 //signed JWT iss
 exports.issuer = "https://id.ripple.com";
@@ -85,14 +85,14 @@ exports.database = {
         database : 'blobvault',
         charset  : 'utf8'
     }
-}
+};
 
 exports.email = {
     user: "",
     password: "" ,
     host:  "" ,
     from : "Company Name <email@example.com>"
-}
+};
 
 exports.ripplelib = {
   trusted:        true,
@@ -103,7 +103,7 @@ exports.ripplelib = {
       , secure:  false
     }
   ]
-}
+};
 
 // PAKDF server setting
 exports.defaultPakdfSetting = {
