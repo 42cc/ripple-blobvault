@@ -10,7 +10,7 @@ exports.blockscore = {
 exports.port = 8080;
 
 // Public URL for this blobvault (required for authinfo)
-exports.url = "https://blobvault.example.com";
+exports.url = "http://127.0.0.1";
 
 // SSL settings
 exports.ssl = false;
@@ -57,7 +57,7 @@ exports.blockscore = {
     key : ''
 };
 
-//signed JWT iss
+// signed JWT iss
 exports.issuer = "https://id.ripple.com";
 
 // run campaign logic
@@ -68,8 +68,8 @@ exports.campaigns = false;
 // Database settings
 // 'mysql', 'memory', 'postgres'
 exports.dbtype = 'postgres';
-//exports.dbtype = 'mysql';
-//exports.dbtype = 'memory';
+// exports.dbtype = 'mysql';
+// exports.dbtype = 'memory';
 exports.database = {
     mysql : {
         host     : '127.0.0.1',
@@ -80,8 +80,8 @@ exports.database = {
     },
     postgres : {
         host     : '127.0.0.1',
-        user     : 'postgres',
-        password : '',
+        user     : 'blobvault',
+        password : 'blob42cc',
         database : 'blobvault',
         charset  : 'utf8'
     }
@@ -138,8 +138,6 @@ exports.reserved = {};
 // Then this option should be set to this:
 // exports.urlPrefix = '/ripple-blobvault';
 exports.urlPrefix = '';
-
-exports.newrelic = 'YOUR KEY';
 
 // Skip 2FA check.
 // exports.skip_2fa = true

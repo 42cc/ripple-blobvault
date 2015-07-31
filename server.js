@@ -1,4 +1,3 @@
-require('newrelic');
 var config = require('./config');
 var http = require('http');
 var https = require('https');
@@ -15,7 +14,7 @@ var blobIdentity = require('./lib/blobIdentity');
 var log = require('./lib/log.js').winston;
 
 var health = require('./health')(store.db)
-health.start()
+health.start();
 
 console.log(ecdsa);
 
