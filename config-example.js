@@ -10,7 +10,7 @@ exports.blockscore = {
 exports.port = 8080;
 
 // Public URL for this blobvault (required for authinfo)
-exports.url = "https://127.0.0.1";
+exports.url = "https://blobvault.example.com";
 
 // SSL settings
 exports.ssl = false;
