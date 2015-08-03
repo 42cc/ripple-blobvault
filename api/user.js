@@ -25,7 +25,51 @@ var getUserInfo = function(username, res) {
     var q = new Queue;
     q.series([
         function (lib) {
-            if (username.length <= config.username_length) {
+
+            // Function to create user object out of what's found in DB
+            var storeUserInfoInObj = function(resp) {
+                reporter.log('storeUserInfoInObj() called');
+                if (resp.error) {
+                    response.json({code: 7498,result: 'error', message: resp.error.message}).status(400).pipe(res)
+                    return;
+                }
+
+                var obj = {}
+                obj.version = config.AUTHINFO_VERSION,
+                obj.blobvault = config.url,
+                obj.pakdf = config.defaultPakdfSetting;
+
+                // For this lookup to succeed, exactly one user should be found.
+                // If no user's found, this will return without user info.
+                // If more than one user's found, that means duplicate e-mail address or Ripple address,
+                //   so this will return without user info.
+                if (resp.length === 1) {
+                    var row = resp[0];
+                    obj.exists = true;
+                    obj.username = row.username;
+                    obj.address = row.address;
+                    obj.emailVerified = row.email_verified;
+                    obj.recoverable = row.encrypted_blobdecrypt_key ? true : false;
+                    lib.set({user:obj, identity_id:row.identity_id});
+                    lib.done();
+                } else {
+                    // No user found, or duplicate users found.
+                    obj.exists = false;
+                    obj.reserved = false;
+                    response.json(obj).pipe(res);
+                    lib.terminate();
+                }
+            };
+
+            if (username.indexOf('@') > 0) {
+                // Entered username is e-mail.  Look up by 'email' column.
+                reporter.log('email address as username');
+                exports.store.read_where_obj(
+                    {obj: {'email': username, 'email_verified': 'true'}},
+                    storeUserInfoInObj);
+
+            } else if (username.length <= config.username_length) {
+                // Entered username is Ripple name.  Look up by username.
                 exports.store.read({username:username,res:res},function(resp) {
                     var obj = {}
                     obj.version = config.AUTHINFO_VERSION;
@@ -43,75 +87,18 @@ var getUserInfo = function(username, res) {
                 });
 
             } else {
-                exports.store.read_where({key:"address",value:username,res:res},
-                    function(resp) {
-                        if (resp.error) {
-                            response.json({code:7498,result:'error',message:resp.error.message}).status(400).pipe(res)
-                            return;
-                        }
-                        var obj = {}
-                        obj.version = config.AUTHINFO_VERSION,
-                        obj.blobvault = config.url,
-                        obj.pakdf = config.defaultPakdfSetting
-                        if (resp.length) {
-                            var row = resp[0];
-                            obj.exists = true;
-                            obj.username = row.username;
-                            obj.address = row.address;
-                            obj.emailVerified = row.email_verified;
-                            obj.recoverable = row.encrypted_blobdecrypt_key ? true : false;
-                            lib.set({user:obj, identity_id:row.identity_id});
-                            lib.done();
-                        } else {
-                            obj.exists = false;
-                            obj.reserved = false;
-                            response.json(obj).pipe(res);
-                            lib.terminate();
-                        }
-                    }
-                )
+                // Entered username is Ripple address.
+                // Look up by 'address' column.
+                exports.store.read_where({key:"address",value:username}, storeUserInfoInObj);
             }
         },
 
         function (lib) {
           var id   = lib.get('identity_id');
           var user = lib.get('user');
-          exports.store.getAttestations({identity_id:id}, function (resp) {
-            var summary = { };
 
-            if (resp.error) {
-              response.json({result:'error', message:'attestation DB error'}).status(500).pipe(res);
-              lib.terminate();
-
-            } else {
-
-              //defaults
-              user.profile_verified  = false;
-              user.identity_verified = false;
-
-              if (resp.length) {
-                resp.forEach(function(row) {
-
-                  if (row.type === 'phone' && row.status === 'verified') {
-                    user.phone_number_verified = row.payload.phone_number_verified;
-
-                  //for now email verified is based on the old method
-                  //} else if (row.type === 'email' && row.status === 'verified') {
-                  //  user.email_verified = row.payload.email_verified;
-
-                  } else if (row.type === 'identity' && row.status === 'verified') {
-                    user.identity_verified = row.payload.identity_verified;
-
-                  } else if (row.type === 'profile' && row.status === 'verified') {
-                    user.profile_verified = row.payload.profile_verified;
-                  }
-                });
-              }
-
-              response.json(user).pipe(res);
-              lib.done();
-            }
-          });
+          response.json(user).pipe(res);
+          lib.done();
         }
     ]);
 }
@@ -915,151 +902,35 @@ var batchlookup = function(req,res,next) {
     })
 }
 
-/*
-var setProfile = function(req,res,next) {
-    var identity_id = req.params.identity_id
-    reporter.log("setProfile:identity_id:", identity_id)
-    var q = new Queue;
-    q.series([
-    function(lib) {
-        if (req.body.attributes) {
-            var q = new Queue;
-            q.forEach(req.body.attributes,
-            function(obj,idx,lib2) {
-                reporter.log("setProfile attr obj:",obj)
-                // set default type
-                if (obj.type == undefined)
-                    obj.type = 'default';
-                obj.identity_id = identity_id
-                exports.store.read_where({table:'identity_attributes',key:'identity_id',value:identity_id},
-                function(resp) {
-                    reporter.log("setProfile:read Where resp:", resp)
-                    var matches = libutils.list_filter(resp,{name:obj.name,type:obj.type})
-                    reporter.log("setProfile:matches", matches,{name:obj.name,type:obj.type})
-                    if (matches.length) {
-                        var attr = matches[0]
-                        if ((obj.name == attr.name) && (obj.type == attr.type)) {
-                            // update
-                            exports.store.update_where({table:'identity_attributes', set: obj, where:{key:'attribute_id',value:attr.attribute_id}},function(resp) {
-                                reporter.log("setProfile: updated identity_attributes", obj, " where:", identity_id)
-                                lib2.done()
-                            })
-                        } else {
-                            //insert
-                            obj.attribute_id = libutils.generate_uuid()
-                            exports.store.insert({table:'identity_attributes', set:obj},function(resp) {
-                                reporter.log("setProfile: inserted identity_attributes", obj, " for:", identity_id)
-                                lib2.done()
-                            })
-                        }
-                    } else {
-                        //insert
-                        obj.attribute_id = libutils.generate_uuid()
-                        exports.store.insert({table:'identity_attributes', set:obj},function(resp) {
-                            reporter.log("setProfile: inserted identity_attributes", obj, " for:", identity_id)
-                            lib2.done()
-                        })
-                    }
-                })
-            },
-            function() {
-                reporter.log("setProfile:all done with attributes")
-                lib.done()
-            })
-        } else
-            lib.done()
-    },
-    function(lib) {
-        if (req.body.addresses) {
-            var q = new Queue;
-            q.forEach(req.body.addresses,
-            function(obj,idx,lib2) {
-                reporter.log("setProfile addr obj:",obj)
-                // set default type
-                if (obj.type == undefined)
-                    obj.type = 'default';
-                obj.identity_id = identity_id
-                exports.store.read_where({table:'identity_addresses',key:'identity_id',value:identity_id},
-                function(resp) {
-                    reporter.log("setProfile:read Where resp:", resp)
-                    var matches = libutils.list_filter(resp,{name:obj.name,type:obj.type})
-                    reporter.log("setProfile:matches", matches,{name:obj.name,type:obj.type})
-                    if (matches.length) {
-                        var attr = matches[0]
-                        if ((obj.name == attr.name) && (obj.type == attr.type)) {
-                            // update
-                            exports.store.update_where({table:'identity_addresses', set: obj, where:{key:'id',value:attr.id}},function(resp) {
-                                reporter.log("setProfile: updated identity_addresses", obj, " where:", identity_id)
-                                lib2.done()
-                            })
-                        } else {
-                            //insert
-                            obj.id = libutils.generate_uuid()
-                            exports.store.insert({table:'identity_addresses', set:obj},function(resp) {
-                                reporter.log("setProfile: inserted identity_addresses", obj, " for:", identity_id)
-                                lib2.done()
-                            })
-                        }
-                    } else {
-                        //insert
-                        obj.id = libutils.generate_uuid()
-                        exports.store.insert({table:'identity_addresses', set:obj},function(resp) {
-                            reporter.log("setProfile: inserted identity_addresses", obj, " for:", identity_id)
-                            lib2.done()
-                        })
-                    }
-                })
-            },
-            function() {
-                reporter.log("setProfile:all done with addresses")
-                lib.done()
-            })
-        } else
-            lib.done()
-    },
-    function(lib) {
-        console.log("setProfile: finished.")
-        response.json({result:'success'}).pipe(res)
-        lib.done()
+var notify_2fa_change     = function(req, res, next) { notify("notify2FAChange",  req, res); };
+var notify_verify_ok      = function(req, res, next) { notify("notifyVerifyOk",   req, res); };
+var notify_verify_fail    = function(req, res, next) { notify("notifyVerifyFail", req, res); };
+var notify_verify_pending = function(req, res, next) { notify("notifyVerifyPending", req, res); };
+var notify_step_null      = function(req, res, next) { notify("notifyStepNull",      req, res); };
+var notify_step_jumio_id  = function(req, res, next) { notify("notifyStepJumioID",   req, res); };
+var notify_step_jumio_doc = function(req, res, next) { notify("notifyStepJumioDoc",  req, res); };
+
+function notify(fn, req, res) {
+    var keyresp = libutils.hasKeys(req.params, ['username']);
+    if (!keyresp.hasAllKeys) {
+        response.json({result:'error', message:'Missing keys',missing:keyresp.missing}).status(400).pipe(res);
+        return;
     }
-    ])
+    var username = req.params.username;
+    exports.store.read_where({
+        key:  'normalized_username',
+        value: libutils.normalizeUsername(username),
+    }, function(resp) {
+        if (!resp.length) {
+            response.json({result:'error', message:"invalid user"}).status(400).pipe(res);
+            return;
+        }
+        var blob = resp[0];
+        email[fn]({email: blob.email, username: blob.username});
+        response.json({result: 'success'}).pipe(res)
+    });
 }
 
-var getProfile = function(req,res,next) {
-    var identity_id = req.params.identity_id
-    reporter.log("getProfile:identity_id:", identity_id)
-    var q = new Queue
-    q.series([
-    function(lib) {
-        exports.store.read_where({table:'identity_attributes',key:'identity_id', value:identity_id},
-        function(resp) {
-            reporter.log("getProfile:attributes lookup response:", resp)
-            lib.set({attributes:resp})
-            lib.done()
-        });
-    },
-    function(lib) {
-        exports.store.read_where({table:'identity_addresses',key:'identity_id', value:identity_id},
-        function(resp) {
-            reporter.log("getProfile:addresses lookup response:", resp)
-            lib.set({addresses:resp})
-            lib.done()
-        });
-    },
-    function(lib) {
-        response.json({
-        result:'success',
-        addresses:lib.get('addresses'),
-        attributes:lib.get('attributes')
-        }).pipe(res)
-        lib.done()
-    }
-    ])
-
-}
-*/
-//exports.setProfile = setProfile;
-//exports.getProfile = getProfile;
 exports.batchlookup = batchlookup;
 exports.request2faToken = request2faToken;
 exports.verify2faToken = verify2faToken;
@@ -1075,3 +946,10 @@ exports.verify = verify;
 exports.authinfo = authinfo;
 exports.rename = rename
 exports.updatekeys = updatekeys;
+exports.notify_2fa_change     = notify_2fa_change;
+exports.notify_verify_ok      = notify_verify_ok;
+exports.notify_verify_fail    = notify_verify_fail;
+exports.notify_verify_pending = notify_verify_pending;
+exports.notify_step_null      = notify_step_null;
+exports.notify_step_jumio_id  = notify_step_jumio_id;
+exports.notify_step_jumio_doc = notify_step_jumio_doc;

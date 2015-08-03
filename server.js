@@ -1,4 +1,3 @@
-require('newrelic');
 var config = require('./config');
 var http = require('http');
 var https = require('https');
@@ -13,11 +12,9 @@ var guard = require('./guard')(store)
 var limiter = guard.resend_email();
 var blobIdentity = require('./lib/blobIdentity');
 var log = require('./lib/log.js').winston;
-// var Ddos= require('ddos');
-// var ddos = new Ddos({burst:30});
 
 var health = require('./health')(store.db)
-health.start()
+health.start();
 
 console.log(ecdsa);
 
@@ -26,11 +23,7 @@ hmac.setStore(store);
 blobIdentity.setStore(store);
 
 var app = express();
-//app.use(ddos.express)
 app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"', {stream: log.winstonStream}));
-
-// app.use(express.limit('1mb')); is deprecated and has no functionality
-// now delegated to raw-body; has a default 1mb limit
 
 app.use(express.json());
 app.use(express.urlencoded());
@@ -46,6 +39,13 @@ app.post('/v1/user/:username/updatekeys', ecdsa.middleware, api.user.updatekeys)
 app.get('/v1/user/recov/:username', ecdsa.recover, api.user.recover);//DEPRECIATE THIS
 app.get('/v1/user/recover/:username', ecdsa.recover, api.user.recover);
 app.post('/v1/user/:username/profile', hmac.middleware, api.user.profile);
+app.post('/v1/user/:username/notify_2fa_change', api.user.notify_2fa_change);
+app.post('/v1/user/:username/notify_verify_ok', api.user.notify_verify_ok);
+app.post('/v1/user/:username/notify_verify_fail', api.user.notify_verify_fail);
+app.post('/v1/user/:username/notify_verify_pending', api.user.notify_verify_pending);
+app.post('/v1/user/:username/notify_step_null',      api.user.notify_step_null);
+app.post('/v1/user/:username/notify_step_jumio_id',  api.user.notify_step_jumio_id);
+app.post('/v1/user/:username/notify_step_jumio_doc', api.user.notify_step_jumio_doc);
 
 app.post('/v1/lookup', api.user.batchlookup)
 
@@ -68,17 +68,6 @@ app.post('/v1/blob/:blob_id/2fa', ecdsa.middleware, api.user.set2fa)
 app.get('/v1/blob/:blob_id/2fa', hmac.middleware, api.user.get2fa)
 app.get('/v1/blob/:blob_id/2fa/requestToken', api.user.request2faToken)
 app.post('/v1/blob/:blob_id/2fa/verifyToken', api.user.verify2faToken)
-
-// attestation routes
-app.post('/v1/attestation/phone', hmac.middleware, blobIdentity.getID, api.attestation.phone.get);
-app.post('/v1/attestation/phone/update', hmac.middleware, blobIdentity.getID, api.attestation.phone.update);
-app.post('/v1/attestation/profile', hmac.middleware, blobIdentity.getID, api.attestation.profile.get);
-app.post('/v1/attestation/profile/update', hmac.middleware, blobIdentity.getID, api.attestation.profile.update);
-app.post('/v1/attestation/identity', hmac.middleware, blobIdentity.getID, api.attestation.identity.get);
-app.post('/v1/attestation/identity/update', hmac.middleware, blobIdentity.getID, api.attestation.identity.update);
-//app.post('/v1/attestation/email', hmac.middleware, blobIdentity.getID, api.attestation.email.get);
-//app.get('/v1/attestation/email/verify', api.attestation.email.verify);
-app.get('/v1/attestation/summary', hmac.middleware, blobIdentity.getID, api.attestation.summary.get);
 
 //signing certificate endpoints
 app.get('/v1/oauth2/cert', api.keys.public);
