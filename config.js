@@ -1,6 +1,6 @@
 // IP of the interface to bind to, default (null) means to bind to any
 // exports.host = '127.0.0.1';
-exports.host = null;
+exports.host = '127.0.0.1';
 
 exports.blockscore = {
     key: ''
@@ -10,7 +10,7 @@ exports.blockscore = {
 exports.port = 8080;
 
 // Public URL for this blobvault (required for authinfo)
-exports.url = "https://gatewayd.p2pay.com";
+exports.url = "http://id.p2pay.com";
 // For local running user this one
 // exports.url = "http://127.0.0.1";
 
@@ -18,7 +18,7 @@ exports.url = "https://gatewayd.p2pay.com";
 exports.ssl = false;
 
 // Whether this blob vault is running behind a reverse proxy
-exports.is_proxy = false;
+exports.is_proxy = true;
 
 // The disk quota per user in kilobytes
 // 1mb = 1024kb = 1024 bytes / kb * 1024 kb / mb = 1048576 bytes / mb
@@ -60,7 +60,7 @@ exports.blockscore = {
 };
 
 // signed JWT iss
-exports.issuer = "https://gatewayd.p2pay.com";
+exports.issuer = "http://id.p2pay.com";
 // For local running user this one
 // exports.issuer = "http://127.0.0.1:8080";
 
@@ -112,7 +112,7 @@ exports.ripplelib = {
 // PAKDF server setting
 exports.defaultPakdfSetting = {
   "host": "auth1.ripple.com",
-  "url": "https://gatewayd.p2pay.com/api/sign",
+  "url": "http://id.p2pay.com/api/sign",
   // for local running use this one
   // "url": "http://127.0.0.1:8080/api/sign",
   "exponent": "010001",
