@@ -43,13 +43,13 @@ var create = function (req, res) {
         response.json({result:'error', message:'query.signature_account does not match body.address'}).status(400).pipe(res)
         return
     }
-
+    /*
     var keyresp = libutils.hasKeys(req.body,['encrypted_blobdecrypt_key','blob_id','username','auth_secret','data','email','address','hostlink','encrypted_secret','domain']);
     if (!keyresp.hasAllKeys) {
         response.json({result:'error', message:'Missing keys',missing:keyresp.missing}).status(400).pipe(res)
         return
     }
-
+    */
     var domain = req.body.domain;
     if (domain.length > 255) {
         response.json({result:'error', message:'Domain string too long'}).status(400).pipe(res)
@@ -82,11 +82,15 @@ var create = function (req, res) {
 
     var authSecret = req.body.auth_secret;
     var address = req.body.address;
+
+    /*
     authSecret = authSecret.toLowerCase();
     if (!/^[0-9a-f]{64}$/.exec(authSecret)) {
         response.json({result:'error',message:"Auth secret must be 32 bytes hex."}).status(400).pipe(res)
         return;
     }
+    */
+
     var q = new Queue;
     q.series([
     function(lib,id) {
@@ -170,7 +174,7 @@ var create = function (req, res) {
                 lib.done();
                 return;
             }
-            email.send({email:params.email,hostlink:params.hostlink,token:params.emailToken,name:username});
+            // email.send({email:params.email,hostlink:params.hostlink,token:params.emailToken,name:username});
             lib.set({id:resp.identity_id})
             response.json(resp).status(201).pipe(res)
 // if account is not funded we set add towards the daily limit
@@ -368,8 +372,8 @@ exports.get = function (req, res) {
                     var identity_id = libutils.generateIdentityId()
                     lib.set({identity_id:identity_id})
                     _blob.identity_id = identity_id;
-                    lib.set({_blob:_blob})
-                    lib.set({needUpdateToIdentityTable:true})
+                    lib.set({_blob:_blob});
+                    lib.set({needUpdateToIdentityTable:true});
                     store.update_where({where:{key:'id', value:_blob.id},set:{identity_id:identity_id}, table:'blob'},function(resp) {
                         reporter.log("blobGet: identity_id added ", identity_id)
                         lib.done()
@@ -448,21 +452,21 @@ exports.get = function (req, res) {
                                 twofactor.remember_me = _blob["2fa_remember_me"];
                                 twofactor.via = _blob["2fa_via"];
                                 twofactor.masked_phone = libutils.maskphone(_blob["2fa_phone"])
-                                lib.set({twofactor:twofactor})
+                                lib.set({twofactor:twofactor});
                                 if (row.is_auth) {
-                                    lib.done()
+                                    lib.done();
                                     return
                                 } else {
                                     // send via, masked phone,
-                                    console.log("no authorization")
+                                    console.log("no authorization");
                                     response.json({result:'error',twofactor:{via:_blob["2fa_via"], masked_phone:libutils.maskphone(_blob["2fa_phone"])},message:'Two factor auth enabled but device is not authorized'}).status(404).pipe(res)
-                                    lib.terminate()
+                                    lib.terminate();
                                     return
                                 }
                             } else {
-                                console.log("no record in twofactor")
+                                console.log("no record in twofactor");
                                 response.json({result:'error',twofactor:{via:_blob["2fa_via"], masked_phone:libutils.maskphone(_blob["2fa_phone"])},message:'Two factor auth enabled but no auth result for that device id'}).status(404).pipe(res)
-                                lib.terminate()
+                                lib.terminate();
                                 return
                             }
 
@@ -471,7 +475,7 @@ exports.get = function (req, res) {
                     } else {
                         console.log("no device id sent")
                         response.json({result:'error',twofactor:{via:_blob["2fa_via"], masked_phone:libutils.maskphone(_blob["2fa_phone"])},message:'Two factor auth required. No device id supplied'}).status(404).pipe(res)
-                        lib.terminate()
+                        lib.terminate();
                         return
                     }
                 } else {
@@ -481,7 +485,7 @@ exports.get = function (req, res) {
             },
             function(lib) {
                 store.identifyMissingFields({blob_id:blob_id},function(resp) {
-                    lib.set({missingfields:resp})
+                    lib.set({missingfields:resp});
                     lib.done()
                 });
             },

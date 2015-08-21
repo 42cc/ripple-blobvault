@@ -438,7 +438,7 @@ var phonevalidate = function(req,res) {
 }
 
 var recover = function(req,res) {
-    var obj = {}
+    var obj = {};
     exports.store.read_where({key:'normalized_username',value:libutils.normalizeUsername(req.params.username)},function(resp) {
         if (resp.length) {
             var row = resp[0];
