@@ -1,6 +1,8 @@
 var express = require('express');
 var mysql = require('mysql');
 
+var port = 51235;
+
 var c = mysql.createConnection({
   host: 'localhost',
   port: '3306',
@@ -10,6 +12,7 @@ var c = mysql.createConnection({
 });
 
 c.connect();
+console.log('Connected to mysql database');
 
 var app = express();
 
@@ -45,4 +48,5 @@ app.post('/:key', function (req, res) {
   res.send();
 });
 
-app.listen(51235);
+app.listen(port);
+console.log('Listening on port ' + port)
