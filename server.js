@@ -6,9 +6,9 @@ var port = 51235;
 var c = mysql.createConnection({
   host: 'localhost',
   port: '3306',
-  database: 'blob_vault',
-  user: 'blobby',
-  password: '57umtSMG4Fyv5ary'
+  database: 'blob_db',
+  user: 'blob',
+  password: 'bnhy567sdfjghgag6'
 });
 
 c.connect();
@@ -49,4 +49,4 @@ app.post('/:key', function (req, res) {
 });
 
 app.listen(port);
-console.log('Listening on port ' + port)
+console.log('Listening on port ' + port);
